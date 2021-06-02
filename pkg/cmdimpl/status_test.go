@@ -16,6 +16,14 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var FluxAllResourcesBlob = []byte(`NAME                     	READY	MESSAGE                                                        	REVISION                                     SUSPENDED
+gitrepository/wego       	True 	Fetched revision: main/00b92bf6606e040c59404a7257508d65d300bc91	main/00b92bf6606e040c59404a7257508d65d300bc91False
+gitrepository/kustomize-app	True 	Fetched revision: main/a2b5b8c0919f405e52619bfc52b5304240d9ef76	main/a2b5b8c0919f405e52619bfc52b5304240d9ef76False
+
+NAME                     	READY	MESSAGE                                                        	REVISION                                     SUSPENDED
+kustomization/wego       	True 	Applied revision: main/00b92bf6606e040c59404a7257508d65d300bc91	main/00b92bf6606e040c59404a7257508d65d300bc91False
+kustomization/kustomize-app	True 	Applied revision: main/a2b5b8c0919f405e52619bfc52b5304240d9ef76	main/a2b5b8c0919f405e52619bfc52b5304240d9ef76False`)
+
 var _ = Describe("Run Command Status Test", func() {
 	It("Verify status info for kustomize app", func() {
 
@@ -38,13 +46,7 @@ var _ = Describe("Run Command Status Test", func() {
 
 		// flux mocks
 		case0 := "get all -n wego-system"
-		output0 := `NAME                     	READY	MESSAGE                                                        	REVISION                                     SUSPENDED
-gitrepository/wego       	True 	Fetched revision: main/00b92bf6606e040c59404a7257508d65d300bc91	main/00b92bf6606e040c59404a7257508d65d300bc91False
-gitrepository/kustomize-app	True 	Fetched revision: main/a2b5b8c0919f405e52619bfc52b5304240d9ef76	main/a2b5b8c0919f405e52619bfc52b5304240d9ef76False
-
-NAME                     	READY	MESSAGE                                                        	REVISION                                     SUSPENDED
-kustomization/wego       	True 	Applied revision: main/00b92bf6606e040c59404a7257508d65d300bc91	main/00b92bf6606e040c59404a7257508d65d300bc91False
-kustomization/kustomize-app	True 	Applied revision: main/a2b5b8c0919f405e52619bfc52b5304240d9ef76	main/a2b5b8c0919f405e52619bfc52b5304240d9ef76False`
+		output0 := FluxAllResourcesBlob
 
 		case1 := "get all -A kustomize-app"
 		output1 := `NAMESPACE   	NAME                     	READY	MESSAGE                                                        	REVISION                                     	SUSPENDED
@@ -59,7 +61,7 @@ wego-system	kustomization/kustomize-app	True 	Applied revision: main/a2b5b8c0919
 				Expect(args).Should(BeElementOf(case0, case1))
 				switch args {
 				case case0:
-					return []byte(output0), nil
+					return output0, nil
 				case case1:
 					return []byte(output1), nil
 				default:
@@ -129,6 +131,72 @@ wego-system	kustomization/kustomize-app	True 	Applied revision: main/a2b5b8c0919
 
 			}),
 		)
+
+	})
+})
+
+var _ = Describe("Run getDeploymentType Test", func() {
+	It("Verify it fails properly when flux fails getting all resources", func() {
+
+		ns := "wego-system"
+		appName := "my-app-name"
+		fakeHandler2 := &fluxopsfakes.FakeFluxHandler{
+			HandleStub: func(args string) ([]byte, error) {
+				return nil, fmt.Errorf("some error")
+			},
+		}
+
+		fluxops.SetFluxHandler(fakeHandler2)
+
+		deploymentType, err := getDeploymentType(ns, appName)
+		Expect(err).Should(MatchError(fmt.Errorf("some error")))
+		Expect(deploymentType).To(BeEmpty())
+
+	})
+
+	It("Verify it fails properly when flux returns invalid info when getting all resources case 1", func() {
+
+		ns := "wego-system"
+		appName := "my-app-name"
+		fakeHandler2 := &fluxopsfakes.FakeFluxHandler{
+			HandleStub: func(args string) ([]byte, error) {
+				Expect(args).Should(Equal("get all -n wego-system"))
+				switch args {
+				case "get all -n wego-system":
+					return []byte("invalid output"), nil
+				}
+				return nil, nil
+			},
+		}
+
+		fluxops.SetFluxHandler(fakeHandler2)
+
+		deploymentType, err := getDeploymentType(ns, appName)
+		Expect(err).Should(MatchError(fmt.Errorf("error getting deployment type for app my-app-name. raw output => invalid output")))
+		Expect(deploymentType).To(BeEmpty())
+
+	})
+
+	It("Verify it fails properly when flux returns invalid info when getting all resources case 2", func() {
+
+		ns := "wego-system"
+		appName := "my-app-name"
+		fakeHandler2 := &fluxopsfakes.FakeFluxHandler{
+			HandleStub: func(args string) ([]byte, error) {
+				Expect(args).Should(Equal("get all -n wego-system"))
+				switch args {
+				case "get all -n wego-system":
+					return []byte("invalid output"), nil
+				}
+				return nil, nil
+			},
+		}
+
+		fluxops.SetFluxHandler(fakeHandler2)
+
+		deploymentType, err := getDeploymentType(ns, appName)
+		Expect(err).Should(MatchError(fmt.Errorf("error getting deployment type for app my-app-name. raw output => invalid output")))
+		Expect(deploymentType).To(BeEmpty())
 
 	})
 })
