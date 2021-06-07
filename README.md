@@ -18,3 +18,40 @@ To set up a development environment for the UI
 4. Run `npm install`
 5. To start up the HTTP server with automated re-compliation, run `make ui-dev`
 6. Run `npm start` to start the frontend dev server (with hot-reloading)
+
+Lint frontend code with `make ui-lint`
+
+Run frontend tests with `make ui-test`
+
+Check dependency vulnerabilities with `make ui-audit`
+
+### Recommended Snippets
+
+To create a new styled React component (with typescript):
+
+```json
+{
+  "Export Default React Component": {
+    "prefix": "tsx",
+    "body": [
+      "import * as React from 'react';",
+      "import styled from 'styled-components'",
+      "",
+      "type Props = {",
+      "  className?: string",
+      "}",
+      "",
+      "function ${1:} ({ className }: Props) {",
+      "  return (",
+      "    <div className={className}>",
+      "      ${0}",
+      "    </div>",
+      "  );",
+      "}",
+      "",
+      "export default styled(${1:})``"
+    ],
+    "description": "Create a default-exported, styled React Component."
+  }
+}
+```
