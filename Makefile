@@ -67,3 +67,12 @@ ui-dev:
 	
 lint:
 	golangci-lint run --out-format=github-actions --build-tags acceptance
+
+ui-lint:
+	npm run lint
+
+ui-test:
+	npm run test
+
+ui-audit:
+	npm audit
